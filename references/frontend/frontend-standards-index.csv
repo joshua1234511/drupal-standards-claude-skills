@@ -1,0 +1,29 @@
+id,category,subcategory,title,description,severity,reference_file,tags
+DS_CSS_001,css,formatting,Use 2 spaces for indentation,All CSS indentation must use exactly 2 spaces. Declarations should be indented one level from their selector.,medium,formatting.md,formatting|indentation|whitespace
+DS_CSS_002,css,formatting,Use Unix line endings (LF),CSS files must use Unix line endings (LF) rather than Windows (CRLF) or Mac (CR) line endings.,low,formatting.md,formatting|line-endings|cross-platform
+DS_CSS_003,css,formatting,End files with single blank line,"CSS files should end with exactly one blank line, no more, no less.",low,formatting.md,formatting|file-structure
+DS_CSS_004,css,formatting,Remove trailing whitespace,Lines should not have any whitespace characters at the end.,low,formatting.md,formatting|whitespace|cleanup
+DS_CSS_005,css,formatting,Use one selector per line for multiple selectors,"When using multiple selectors, place each selector on its own line for better readability.",medium,formatting.md,formatting|selectors|readability
+DS_CSS_006,css,formatting,Quote attribute values in selectors,Always use quotes around attribute values in CSS selectors.,medium,formatting.md,formatting|selectors|attributes
+DS_CSS_007,css,formatting,End declarations with semicolons,"Every CSS declaration must end with a semicolon, including the last declaration in a rule.",high,formatting.md,formatting|declarations|syntax
+DS_CSS_008,css,formatting,Use double quotes for quoted values,"When quotes are needed in CSS values, use double quotes rather than single quotes.",low,formatting.md,formatting|values|quotes
+DS_CSS_009,css,units,Prefer rem units over px,Use rem units for sizing to improve accessibility and responsive design.,medium,units-and-values.md,formatting|units|accessibility|responsive
+DS_CSS_010,css,formatting,Omit units for zero values,Do not include units when the value is zero (0px should be 0).,low,formatting.md,formatting|values|optimization
+DS_CSS_011,css,organization,Order properties logically,"Order CSS properties in a logical sequence: positioning, box model, then other declarations.",medium,formatting.md,formatting|organization|properties
+DS_CSS_012,css,architecture,Use component-based CSS architecture,"Structure CSS using SMACSS methodology with Base, Layout, Component, State, and Theme categories.",high,architecture.md,architecture|smacss|components|modularity
+DS_CSS_013,css,naming,Use BEM-like naming for CSS classes,"Use clear naming conventions: .component-name, .component-name--variant, .component-name__sub-object.",high,architecture.md,architecture|naming|bem|conventions
+DS_CSS_014,css,architecture,Use .is- prefix for state classes,State classes that represent temporary appearance changes should use the .is- prefix.,medium,architecture.md,architecture|state|naming|conventions
+DS_CSS_015,css,architecture,Use .js- prefix for JavaScript hooks,Classes used solely for JavaScript targeting should use the .js- prefix and have no CSS styling.,medium,architecture.md,architecture|javascript|separation|hooks
+DS_CSS_016,css,selectors,Use functional pseudo-classes for combining selectors,"Use functional pseudo-classes like :is(), :not(), or :where() to combine selectors when possible.",medium,formatting.md,selectors|pseudo-classes|modern-css
+DS_CSS_017,css,formatting,Use space after commas in property values,Include a space after commas in property values for better readability.,low,formatting.md,formatting|spacing|readability
+DS_CSS_018,css,rtl,Add LTR comments for directional properties,"For properties without logical property equivalents, add /* LTR */ comment and create additional RTL ruleset.",medium,rtl.md,rtl|internationalization|accessibility|comments
+DS_CSS_019,css,formatting,Place vendor prefixes before non-prefixed version,Place vendor-prefixed properties directly before their non-prefixed version.,medium,formatting.md,formatting|vendor-prefixes|compatibility
+DS_CSS_020,css,comments,Use Doxygen-style multi-line comments,Use Doxygen-style comments for multi-line descriptions and file headers.,medium,comments.md,comments|documentation|doxygen
+DS_JS_001,javascript,syntax,Use ES6+ syntax,Use modern JavaScript syntax including arrow functions template literals and destructuring.,medium,javascript.md,javascript|es6|modern|syntax
+DS_JS_002,javascript,patterns,Use Drupal.behaviors pattern,All JavaScript that interacts with the DOM must use the Drupal.behaviors pattern for AJAX compatibility.,high,javascript.md,javascript|behaviors|ajax|drupal
+DS_JS_003,javascript,events,Use once() for event handlers,Use the once() function from Drupal core to prevent duplicate event handlers on AJAX updates.,high,javascript.md,javascript|events|once|ajax
+DS_JS_004,javascript,i18n,Use Drupal.t() for translatable strings,All user-facing strings must use Drupal.t() for translation support.,medium,javascript.md,javascript|translation|i18n|drupal
+DS_JS_005,javascript,syntax,Use strict mode,Always enable strict mode within IIFEs using 'use strict'.,medium,javascript.md,javascript|strict|syntax
+DS_TWIG_001,twig,attributes,Use Drupal attributes object properly,Always use the attributes object for element attributes instead of hardcoding.,high,twig.md,twig|attributes|drupal|accessibility
+DS_TWIG_002,twig,naming,Use BEM class naming in templates,Apply BEM naming conventions consistently in Twig templates using clean_class filter.,medium,twig.md,twig|bem|naming|classes
+DS_TWIG_003,twig,security,Proper escaping in templates,Understand and correctly apply Twig auto-escaping. Use |raw only when content is trusted.,high,twig.md,twig|security|escaping|xss
