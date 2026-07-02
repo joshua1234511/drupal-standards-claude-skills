@@ -2,11 +2,12 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="${ROOT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 UPSTREAM_REPO_URL="${UPSTREAM_REPO_URL:-https://git.drupalcode.org/project/ai_best_practices.git}"
 UPSTREAM_REF="${UPSTREAM_REF:-1.0.x}"
 WORK_DIR="$(mktemp -d)"
 UPSTREAM_DIR="$WORK_DIR/upstream"
+UPSTREAM_DIR_OVERRIDE="${UPSTREAM_DIR_OVERRIDE:-}"
 
 cleanup() {
   rm -rf "$WORK_DIR"
@@ -61,8 +62,16 @@ sync_file() {
   echo "Updated: $destination"
 }
 
-echo "Cloning $UPSTREAM_REPO_URL ($UPSTREAM_REF)"
-git clone --depth 1 --branch "$UPSTREAM_REF" "$UPSTREAM_REPO_URL" "$UPSTREAM_DIR"
+if [[ -n "$UPSTREAM_DIR_OVERRIDE" ]]; then
+  UPSTREAM_DIR="$UPSTREAM_DIR_OVERRIDE"
+  echo "Using local upstream directory: $UPSTREAM_DIR"
+else
+  echo "Cloning $UPSTREAM_REPO_URL ($UPSTREAM_REF)"
+  if ! git clone --depth 1 --branch "$UPSTREAM_REF" "$UPSTREAM_REPO_URL" "$UPSTREAM_DIR"; then
+    echo "Falling back to upstream default branch"
+    git clone --depth 1 "$UPSTREAM_REPO_URL" "$UPSTREAM_DIR"
+  fi
+fi
 
 declare -a FILE_MAPPINGS=(
   "configuration.md:references/backend/configuration.md"

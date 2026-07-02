@@ -25,10 +25,10 @@ jobs:
       - name: Create pull request
         uses: peter-evans/create-pull-request@v7
         with:
-          commit-message: chore: sync ai_best_practices updates
+          commit-message: "chore: sync ai_best_practices updates"
           branch: chore/weekly-ai-best-practices-sync
           delete-branch: true
-          title: chore: sync ai_best_practices updates
+          title: "chore: sync ai_best_practices updates"
           body: |
             ## Summary
             - sync tracked reference files from `project/ai_best_practices`
