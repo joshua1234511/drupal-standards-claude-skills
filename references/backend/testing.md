@@ -4,14 +4,149 @@ Testing standards for Drupal modules covering PHPUnit, Kernel, Functional, and B
 
 ## Table of Contents
 
-1. [Test Organization](#test-organization)
-2. [Unit Tests](#unit-tests)
-3. [Kernel Tests](#kernel-tests)
-4. [Functional Tests](#functional-tests)
-5. [JavaScript Testing](#javascript-testing)
-6. [Behat/BDD Testing](#behatbdd-testing)
-7. [Test Data and Fixtures](#test-data-and-fixtures)
-8. [Mocking and Stubs](#mocking-and-stubs)
+1. [When and What to Test](#when-and-what-to-test)
+2. [Choosing the Right Test Type](#choosing-the-right-test-type)
+3. [Test Organization](#test-organization)
+4. [Unit Tests](#unit-tests)
+5. [Kernel Tests](#kernel-tests)
+6. [Functional Tests](#functional-tests)
+7. [JavaScript Testing](#javascript-testing)
+8. [Behat/BDD Testing](#behatbdd-testing)
+9. [Test Data and Fixtures](#test-data-and-fixtures)
+10. [Mocking and Stubs](#mocking-and-stubs)
+11. [Running Tests](#running-tests)
+
+---
+
+## When and What to Test
+
+### TEST010: Cover Bug Fixes and Behaviour Changes with Tests
+
+**Severity:** `high`
+
+A bug fix almost always needs a test. Without one, the same bug can silently
+regress later. Behaviour changes almost always need a test as well.
+Configuration-only changes usually do not.
+
+- If you are modifying an **existing feature**, find the existing test first and
+  update it rather than adding a parallel one.
+- If you are adding a **new feature**, write a new test covering the happy path
+  and at least the most likely error paths.
+
+**Good Example:**
+```php
+// Fixing a bug where empty input silently returned []. Add a regression test
+// that fails before the fix and passes after it.
+public function testProcessRejectsEmptyInput(): void {
+  $this->expectException(\InvalidArgumentException::class);
+  $this->dataProcessor->process([]);
+}
+```
+
+**Bad Example:**
+```php
+// Bug fixed in the service, but no test added. The bug can silently return
+// on any future refactor with nothing to catch it.
+```
+
+---
+
+## Choosing the Right Test Type
+
+### TEST011: Prefer Functional and Kernel Tests Over Unit Tests
+
+**Severity:** `high`
+
+Drupal has five test types. Reach for **Functional** or **Kernel** first. General
+PHP and AI-generated advice frequently suggests Unit tests as the starting point;
+in Drupal that advice is usually wrong. Most Drupal code integrates services,
+hooks, and entities through the dependency injection container, which makes
+integration-level tests far more valuable than heavily mocked unit tests.
+
+| Test type | Base class | Use when |
+| --- | --- | --- |
+| Functional | `\Drupal\Tests\BrowserTestBase` | **Best default.** Boots a real site, installs modules with config and schema; tests PHP APIs and the UI, HTTP requests, forms, pages. |
+| Kernel | `\Drupal\KernelTests\KernelTestBase` | Services, APIs, and hook implementations that do not need a UI. Faster than Functional, but a minimal environment. |
+| FunctionalJavascript | `\Drupal\FunctionalJavascriptTests\WebDriverTestBase` | Only when the UI interaction involves JavaScript (AJAX, modals, dynamic visibility). |
+| Unit | `\Drupal\Tests\UnitTestCase` | Only for pure functions with **no** container dependencies. Uncommon in Drupal. |
+| Build | `\Drupal\BuildTests\Framework\BuildTestBase` | Codebase-layout scenarios such as Composer dependency resolution. Advanced and uncommon. |
+
+**Bad Example:**
+```php
+// Unit-testing a service that depends on the container. This requires extensive
+// mocking that breaks on any refactor. A Kernel test would be simpler and more
+// robust here.
+class OrderServiceTest extends UnitTestCase {
+  public function testPlaceOrder(): void {
+    // 40 lines of prophecy mocks for entity type manager, storage, queue,
+    // logger, config factory... just to test one integration path.
+  }
+}
+```
+
+---
+
+### TEST012: Declare Required PHPUnit Class Attributes
+
+**Severity:** `high`
+
+Kernel, Functional, and FunctionalJavascript test classes should declare the
+`#[RunTestsInSeparateProcesses]` attribute. This became a **hard requirement in
+Drupal 11.3** and is strongly recommended on 10.x. Unit tests run in-process and
+do not need it.
+
+**Good Example:**
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\Tests\mymodule\Kernel;
+
+use Drupal\KernelTests\KernelTestBase;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+
+/**
+ * @group mymodule
+ */
+#[RunTestsInSeparateProcesses]
+class DataProcessorKernelTest extends KernelTestBase {
+  // ...
+}
+```
+
+**Bad Example:**
+```php
+// Missing #[RunTestsInSeparateProcesses]: fails on Drupal 11.3+.
+class DataProcessorKernelTest extends KernelTestBase {
+  // ...
+}
+```
+
+---
+
+### TEST013: Use the Exact Test Namespace
+
+**Severity:** `high`
+
+Tests must live in the correct namespace or the test runner will not discover
+them. The namespace segment must match the test type exactly, including the
+`FunctionalJavascript` capitalisation.
+
+**Good Example:**
+```php
+namespace Drupal\Tests\mymodule\Unit;                 // Unit
+namespace Drupal\Tests\mymodule\Kernel;               // Kernel
+namespace Drupal\Tests\mymodule\Functional;           // Functional
+namespace Drupal\Tests\mymodule\FunctionalJavascript; // FunctionalJavascript
+```
+
+**Bad Example:**
+```php
+// Wrong capitalisation: test is silently not discovered and never runs.
+namespace Drupal\Tests\mymodule\FunctionalJavaScript;
+namespace Drupal\Tests\mymodule\Functionaljavascript;
+```
 
 ---
 
@@ -456,6 +591,46 @@ class DataProcessorKernelTest extends KernelTestBase {
 
 ---
 
+### TEST014: Explicitly Install Schema and Config in Kernel Tests
+
+**Severity:** `high`
+
+Kernel tests provide a **minimal** environment: no config is installed, no entity
+database tables are created, and module dependencies are not resolved
+automatically. You must set these up explicitly in `setUp()`. If a Kernel test
+throws "table does not exist" or similar errors, a missing install call is almost
+always the cause.
+
+**Good Example:**
+```php
+protected function setUp(): void {
+  parent::setUp();
+
+  // Create entity storage tables you rely on.
+  $this->installEntitySchema('user');
+  $this->installEntitySchema('node');
+
+  // Create module-defined schema tables (e.g. hook_schema()).
+  $this->installSchema('node', ['node_access']);
+
+  // Import default config for the listed modules.
+  $this->installConfig(['system', 'node', 'filter', 'mymodule']);
+}
+```
+
+**Bad Example:**
+```php
+protected function setUp(): void {
+  parent::setUp();
+  // Assumes tables and config already exist. Node::create()->save() will fail
+  // with "Base table or view not found" because no schema was installed.
+  $node = Node::create(['type' => 'article', 'title' => 'X']);
+  $node->save();
+}
+```
+
+---
+
 ## Functional Tests
 
 ### TEST005: Writing Functional Tests
@@ -645,6 +820,48 @@ class MyModuleUserInterfaceTest extends BrowserTestBase {
     $this->assertSession()->addressEquals('/admin/config/mymodule/settings');
   }
 
+}
+```
+
+---
+
+### TEST015: Beware the Dual-Container Trap in Functional Tests
+
+**Severity:** `high`
+
+Functional tests run **two separate Drupal instances** that share the same
+database but have separate PHP memory spaces: one in the PHPUnit process and one
+in the web server that serves the requests. State set in the test process (such
+as registering a service, setting a static variable, or overriding a container
+parameter) is **not** visible to the web server process, and vice versa. This
+causes confusing bugs around caching and service registration.
+
+**Bad Example:**
+```php
+// Sets a value in the PHPUnit process only. The page request runs in the web
+// server process and never sees it.
+public function testFeatureFlag(): void {
+  \Drupal::state()->set('mymodule.feature_enabled', TRUE);
+  $this->drupalGet('/mymodule/feature');
+  // Fails intermittently: the served request had its own memory space.
+}
+```
+
+**Good Example:**
+```php
+// Persist to the shared database (state API writes to DB), then let the request
+// read it. If you must rebuild the container, do it explicitly and comment why.
+public function testFeatureFlag(): void {
+  // State is DB-backed, so this IS visible to the web server process.
+  $this->container->get('state')->set('mymodule.feature_enabled', TRUE);
+
+  // If a change requires the served process to rebuild its container, force it
+  // and document the reason for the next reader.
+  // Rebuild needed: service definition changed after the site was installed.
+  $this->rebuildContainer();
+
+  $this->drupalGet('/mymodule/feature');
+  $this->assertSession()->pageTextContains('Feature enabled');
 }
 ```
 
@@ -857,6 +1074,51 @@ class MyModuleJavascriptTest extends WebDriverTestBase {
 
 }
 ```
+
+---
+
+### TEST016: Always Assert the Result of waitForElement
+
+**Severity:** `high`
+
+FunctionalJavascript interactions are asynchronous and prone to flakiness.
+`waitForElement()`, `waitForElementVisible()`, and similar methods return `NULL`
+when the element never appears. Calling them bare, without asserting the return
+value, produces a **false-passing** test that always passes even when the element
+never showed up. After pressing a button that triggers AJAX, wait for the
+expected element and then assert.
+
+**Bad Example:**
+```php
+// Does not assert the result. If #page-title never appears, the test still
+// passes silently.
+$this->assertSession()->waitForElement('css', '#page-title');
+```
+
+**Good Example:**
+```php
+// Waits AND asserts the result, so a missing element fails the test.
+$this->assertNotEmpty(
+  $this->assertSession()->waitForElement('css', '#page-title')
+);
+
+// After an AJAX-triggering action:
+$page->pressButton('Save');
+$this->assertNotEmpty(
+  $this->assertSession()->waitForElementVisible('css', '.messages--status')
+);
+```
+
+---
+
+### TEST017: Avoid Nightwatch; Prefer PHPUnit JavaScript Tests
+
+**Severity:** `low`
+
+Do not write new Nightwatch tests. They are JavaScript-based, prone to flakiness,
+and the Drupal community is moving toward Playwright as the replacement. Use
+`WebDriverTestBase` (FunctionalJavascript) for JavaScript coverage today, and
+prefer Playwright over Nightwatch where a browser-driven JS runner is required.
 
 ---
 
@@ -1260,4 +1522,128 @@ class MockingExampleTest extends UnitTestCase {
   }
 
 }
+```
+
+---
+
+### TEST018: Reduce Repetition with Data Providers and #[TestWith]
+
+**Severity:** `medium`
+
+When you have multiple similar test cases, use `setUp()`, a data provider, or the
+`#[TestWith]` attribute rather than copy-pasting near-identical test methods.
+Data providers give each case a readable label in the test output; `#[TestWith]`
+is convenient for a small number of inline cases.
+
+**Good Example:**
+```php
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\TestWith;
+
+// Inline cases with #[TestWith].
+#[TestWith(['hello', 'HELLO'])]
+#[TestWith(['MiXeD', 'MIXED'])]
+#[TestWith(['test123', 'TEST123'])]
+public function testUppercase(string $input, string $expected): void {
+  $this->assertSame($expected, strtoupper($input));
+}
+
+// Larger or labelled cases with a data provider (static, per PHPUnit 10+).
+public static function slugProvider(): array {
+  return [
+    'spaces to dashes' => ['Hello World', 'hello-world'],
+    'strips punctuation' => ['A, B & C!', 'a-b-c'],
+  ];
+}
+
+#[DataProvider('slugProvider')]
+public function testSlug(string $input, string $expected): void {
+  $this->assertSame($expected, $this->slugger->slug($input));
+}
+```
+
+**Bad Example:**
+```php
+// Three copy-pasted methods that differ only by input/expected values.
+public function testUppercaseHello(): void {
+  $this->assertSame('HELLO', strtoupper('hello'));
+}
+public function testUppercaseMixed(): void {
+  $this->assertSame('MIXED', strtoupper('MiXeD'));
+}
+public function testUppercaseDigits(): void {
+  $this->assertSame('TEST123', strtoupper('test123'));
+}
+```
+
+---
+
+## Running Tests
+
+### TEST019: Set SIMPLETEST_BASE_URL and SIMPLETEST_DB
+
+**Severity:** `high`
+
+Kernel, Functional, and FunctionalJavascript tests require two environment
+variables to be set, or PHPUnit will either fail or silently skip the tests. Run
+tests through DDEV (or your local environment) with both defined.
+
+- `SIMPLETEST_BASE_URL`: the local HTTP address of your Drupal site.
+- `SIMPLETEST_DB`: the database connection string.
+
+**Good Example:**
+```bash
+# Inside DDEV, export both then run the tests.
+export SIMPLETEST_BASE_URL="http://web"
+export SIMPLETEST_DB="mysql://db:db@db/db"
+
+# Run a module's whole test suite.
+vendor/bin/phpunit -c web/core web/modules/custom/mymodule
+
+# Run a single group.
+vendor/bin/phpunit -c web/core --group mymodule
+
+# Run one test file.
+vendor/bin/phpunit -c web/core \
+  web/modules/custom/mymodule/tests/src/Kernel/DataProcessorKernelTest.php
+```
+
+**Bad Example:**
+```bash
+# No SIMPLETEST_* variables: Kernel/Functional tests fail to bootstrap or are
+# silently skipped, giving a false sense of a passing suite.
+vendor/bin/phpunit web/modules/custom/mymodule
+```
+
+---
+
+### TEST020: Group Tests with @group / #[Group]
+
+**Severity:** `medium`
+
+Give every test a group so it can be selected with `--group` and included in
+targeted CI runs. Use the module machine name as the group, and add a domain
+group where useful.
+
+**Good Example:**
+```php
+use PHPUnit\Framework\Attributes\Group;
+
+#[Group('mymodule')]
+class DataProcessorKernelTest extends KernelTestBase {
+  // ...
+}
+
+// Annotation form (still valid, common in existing code):
+/**
+ * @group mymodule
+ */
+class DataProcessorTest extends UnitTestCase {}
+```
+
+**Bad Example:**
+```php
+// No group: the test cannot be selected with --group and is easily missed in
+// scoped CI runs.
+class DataProcessorKernelTest extends KernelTestBase {}
 ```

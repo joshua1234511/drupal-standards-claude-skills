@@ -9,6 +9,11 @@ Standards for CI/CD, GitHub Actions, build optimization, and deployment workflow
 3. [Configuration Management](#configuration-management)
 4. [Deployment Workflows](#deployment-workflows)
 5. [Environment Configuration](#environment-configuration)
+6. [Drupal.org Contribution Workflow](#drupalorg-contribution-workflow)
+7. [Commit Messages](#commit-messages)
+8. [Merge Requests](#merge-requests)
+9. [GitLab CI (Drupal.org)](#gitlab-ci-drupalorg)
+10. [Drupal.org to GitLab Migration](#drupalorg-to-gitlab-migration)
 
 ---
 
@@ -873,3 +878,383 @@ $config['mymodule.settings']['features']['new_checkout'] =
 $config['mymodule.settings']['features']['dark_mode'] = 
   filter_var(getenv('FEATURE_DARK_MODE'), FILTER_VALIDATE_BOOLEAN);
 ```
+
+---
+
+## Drupal.org Contribution Workflow
+
+Drupal hosts its source code on a self-managed GitLab instance at `git.drupalcode.org`. Contributing to Drupal core or contrib projects follows conventions that differ from a typical GitHub fork-and-PR flow: an **issue-fork workflow** for branches and MRs, a **work items API** for issue tracking, and **Drupal Conventional Commits** for commit messages. Use the GitLab CLI (`glab`) and the GitLab REST API for these tasks.
+
+### CONTRIB001: Use the Issue-Fork Model
+
+**Severity:** `high`
+
+Drupal does not use personal forks. Each issue gets a **dedicated fork** at `git.drupalcode.org/issue/<project>-<issue-id>`. Push your branch to that fork, then open a merge request **from the fork to the upstream project**. A fork is never created by pushing or via the API — always provision it first with a `/do:fork` comment on the work item or via the Drupal.org management UI.
+
+Default to the issue fork even if you are a maintainer with push access. Drupal's collaboration culture is that *anyone* can contribute to an issue through its fork; pushing directly to `project/<repo>` locks non-maintainers out of collaborating.
+
+**Good Example:**
+```bash
+# 1. View the work item (always pass --repo; never rely on cwd)
+glab issue view 3586461 --repo "git.drupalcode.org/project/token"
+
+# 2. Provision the issue fork by commenting /do:fork on the work item,
+#    or clicking "Create issue fork" on the Drupal.org management page.
+#    (Never create it by pushing or via the API — that returns 404/301.)
+
+# 3. Add the fork remote. Note: SSH uses the ORIGIN host git.drupal.org,
+#    NOT the CDN host git.drupalcode.org (which has no SSH listener).
+git remote add token-3586461 git@git.drupal.org:issue/token-3586461.git
+
+# 4. Branch as {issue-id}-{short-description}
+git switch -c 3586461-add-issue-templates
+
+# 5. Push to the issue fork (not to origin)
+git push token-3586461 3586461-add-issue-templates
+```
+
+**Bad Example:**
+```bash
+# ❌ Creating a personal fork (Drupal doesn't use these)
+# ❌ Pushing your branch straight to the upstream project as a maintainer
+git push origin 3586461-add-issue-templates
+
+# ❌ SSH remote pointing at the CDN host — hangs and times out on port 22
+git remote add fork git@git.drupalcode.org:issue/token-3586461.git
+
+# ❌ Trying to create the fork by pushing to a non-existent fork URL (404)
+```
+
+---
+
+### CONTRIB002: Follow the Contributor Happy Path
+
+**Severity:** `medium`
+
+For a migrated project, follow this end-to-end sequence when submitting a change:
+
+1. **Find or create the work item** — `glab issue view <id>` / `glab issue create`.
+2. **Get a usable issue fork** — the step most people miss; you cannot push without it.
+3. **Set up remotes & branch** — add the fork remote, branch as `{issue-id}-{short-description}`.
+4. **Commit** in Conventional Commits format with `By:` lines (see COMMIT001).
+5. **Push to the fork & open the MR** via the REST API — `glab mr create` cannot do cross-project (fork→upstream) MRs.
+6. **Wire the MR to the issue** — put `Closes #<id>` in the description so GitLab links both sides and auto-closes the issue on merge.
+
+**Is the project on GitLab yet?** Drupal.org is mid-migration. Migrated projects have issues at `git.drupalcode.org/project/<repo>/-/work_items/<id>` — use `glab`. Non-migrated projects keep issues at `www.drupal.org/project/<repo>/issues` — `glab` cannot see the legacy queue; use the drupal.org web UI or `drupalorg-cli`. An empty `glab issue list` on an obviously active project usually means it is still on the legacy queue.
+
+**Getting a usable issue fork (decision tree):**
+```
+Does an issue fork exist yet?
+├─ No  → create it:   /do:fork    (issue comment)  ·or·  "Create fork"    (Drupal.org page)
+└─ Yes → do you already have push access?
+         ├─ Yes → use it
+         └─ No  → request access: /do:access (issue comment) ·or· "Request access" (page)
+```
+
+**Check access before requesting it:** a `git push` that 403s means you need `/do:access`; a 404 on the fork URL means the fork does not exist yet (`/do:fork`).
+
+---
+
+### CONTRIB003: Manage Issues via Work Items
+
+**Severity:** `medium`
+
+Issue URLs use `/-/work_items/<id>` (not `/-/issues/<id>`). Use `glab issue` commands, always passing `--repo`. Do not require a work item to exist — some projects still use the legacy queue.
+
+**Good Example:**
+```bash
+# Look up issue templates before creating
+ls .gitlab/issue_templates/
+cat ".gitlab/issue_templates/Bug.md"
+
+# Create a work item (check labels first with `glab label list`)
+glab issue create \
+  --title "Short descriptive title of the issue" \
+  --description "$(cat /tmp/issue_body.md)" \
+  --label "bug,needs-review" \
+  --assignee "@me" \
+  --repo "git.drupalcode.org/project/token"
+
+# Common operations
+glab issue list --repo "git.drupalcode.org/project/token"
+glab issue view 3586461 --repo "git.drupalcode.org/project/token"
+# ✅ `glab issue comment` requires -m, NOT --body
+glab issue comment 3586461 -m "Message" --repo "git.drupalcode.org/project/token"
+```
+
+**Bad Example:**
+```bash
+# ❌ --body is not supported by `glab issue comment`
+glab issue comment 3586461 --body "Message"
+
+# ❌ Bare command with no --repo resolves against your default host (often
+#    gitlab.com) or 404s — it can't know which Drupal project you mean
+glab issue view 3586461
+```
+
+---
+
+### CONTRIB004: Track State via Scoped Labels and /do: Commands
+
+**Severity:** `medium`
+
+Issue workflow state (Needs Work, Needs Review, RTBC) is tracked via **scoped labels**, not the work item status widget. Drupal.org's GitLab integration also processes custom `/do:` comment commands — these are not standard GitLab quick actions and only work on git.drupalcode.org.
+
+| Label | Meaning |
+|---|---|
+| `state::needsWork` | Reviewer requested changes; MR in Draft |
+| `state::needsReview` | Ready for a reviewer; MR marked Ready |
+| `state::rtbc` | Reviewed and Tested By the Community — approved + CI green, ready to merge |
+
+| `/do:` Command | What it does |
+|---|---|
+| `/do:fork` | Provisions the issue fork + branch from the default branch |
+| `/do:access` | Grants current user access to an existing fork |
+| `/do:label ~label1 ~label2` | Adds labels (e.g. `~state::rtbc`) |
+| `/do:unlabel ~label1` | Removes a label |
+| `/do:relabel ~label1 ~label2` | Replaces all labels |
+| `/do:assign @username` / `/do:unassign` / `/do:reassign` | Manage assignees |
+
+Label names are project-configurable — check `glab label list --repo "…"` first. The MR Draft/Ready toggle maps to issue state: Draft → Needs Work; Ready → Needs Review.
+
+---
+
+### CONTRIB005: Do Not Pull People In Unprompted
+
+**Severity:** `medium`
+
+Do not `@`-mention, assign, or add as reviewer any contributor in issues, MRs, comments, or commit messages unless the human directed you to. Pinging someone carries social weight (a notification, an implied ask on their time); deciding *whom* to involve is the maintainer's judgment call. State the substance instead — flag the open question or request review in general terms — and leave the tagging to the human. (`@me` for self-assignment is fine.)
+
+---
+
+## Commit Messages
+
+### COMMIT001: Use Drupal Conventional Commits Format
+
+**Severity:** `high`
+
+Drupal uses the **Conventional Commits** specification with a Drupal-specific issue reference and `By:` attribution lines.
+
+**Format:**
+```
+{type}: #{issue-id} Short summary of the change
+
+Optional body — explain the why, not the what.
+Wrap at ~72 characters.
+
+By: drupal-username
+By: other-contributor
+```
+
+**Types:** `feat` · `fix` · `docs` · `refactor` · `test` · `ci` · `perf` · `task` · `revert`
+
+**Rules:**
+- The issue ID is the last segment of the issue URL (e.g. `3586461` from `/-/work_items/3586461`). The numeric ID is identical on drupal.org and GitLab — no conversion needed.
+- `By:` lines use **Drupal.org usernames**, not GitLab names, email addresses, or `@username` syntax — ask the user if unsure.
+- Use `By:` for all contributors (author, reviewer, reporter). Maintainers may also use `Co-authored-by:`, `Reviewed-by:`, or `Reported-by:` for specificity.
+
+**Good Example:**
+```
+feat: #3586461 Add standardized commit message format
+
+Introduces the issue-template stub so contributors get a consistent
+prompt when opening a work item.
+
+By: drupal-username
+By: another-contributor
+```
+
+**Bad Example:**
+```
+# ❌ No type prefix, no issue reference, uses a GitHub-style @handle / email
+Added issue templates
+
+By: @some-user <user@example.com>
+```
+
+---
+
+## Merge Requests
+
+### MR001: Open Cross-Project MRs via the REST API
+
+**Severity:** `high`
+
+MRs go **from the issue fork to the upstream project**. `glab mr create` cannot create cross-project (fork→upstream) MRs — use the GitLab REST API directly via `glab api`.
+
+**Path encoding gotcha:** the REST API identifies a project by its namespaced path *URL-encoded* — the `/` becomes `%2F`. So `project/<repo>` is written `project%2F<repo>`, and `issue/<project>-<issue-id>` becomes `issue%2F<project>-<issue-id>` in API paths.
+
+**Good Example:**
+```bash
+# Check for an existing MR first
+glab mr list --repo "git.drupalcode.org/project/token"
+
+# 1. Read the MR template and fill it in
+cat .gitlab/merge_request_templates/Default.md
+
+# 2. Find the UPSTREAM project's numeric ID (for target_project_id)
+glab api --hostname git.drupalcode.org "/projects/project%2Ftoken"   # read the `id` field
+
+# 3. Create the MR from the fork (path in URL) to upstream, body inline
+glab api --hostname git.drupalcode.org \
+  -F target_project_id=<upstream-id> \
+  -f source_branch="3586461-add-issue-templates" \
+  -f target_branch="main" \
+  -f title="feat: #3586461 Short summary" \
+  -f description='## Summary
+
+What this MR does, in a single-quoted multi-line string. Markdown `code`
+is fine inside single quotes.
+
+Closes #3586461
+
+AI-Generated: Yes (Used Claude to draft the issue templates.)' \
+  -F remove_source_branch=true \
+  "/projects/issue%2Ftoken-3586461/merge_requests"
+```
+
+**Bad Example:**
+```bash
+# ❌ glab mr create cannot do cross-project fork→upstream MRs
+glab mr create --source-branch 3586461-add-issue-templates --target-branch main
+```
+
+**MR conventions:**
+- **Title:** `{type}: #{issue-id} Short summary` — Conventional Commits format. GitLab squash-merges use the MR *title* as the commit message, so the title itself must follow the standard.
+- **Target branch:** confirm with the user if not `main`.
+- **Link the issue:** put `Closes #<id>` in the description.
+- Mark the MR **Draft** while working, **Ready** when it needs review.
+
+---
+
+### MR002: Add the Required AI Disclosure
+
+**Severity:** `high`
+
+Drupal's [AI contribution policy](https://www.drupal.org/docs/develop/issues/issue-procedures-and-etiquette/policy-on-the-use-of-ai-when-contributing-to-drupal) requires disclosing any significant AI-assisted contribution. Append an `AI-Generated:` line to the MR description.
+
+**Good Example:**
+```
+AI-Generated: Yes (Used Claude Code to refactor the service and write tests.)
+```
+
+---
+
+### MR003: Merge and Rebase Constraints
+
+**Severity:** `high`
+
+Drupal.org projects require **fast-forward merges**, and merges must go through the **GitLab web UI** — API/CLI merges are blocked at the infrastructure level.
+
+**Key constraints:**
+- **API merges are blocked** — even a maintainer with a full `api`-scoped PAT cannot merge via `PUT /projects/:id/merge_requests/:iid/merge` or `glab mr merge`; both return permission errors or a 301 redirect to `drupal.org/git-error`. Direct anyone asking "can you commit this?" to the web UI merge button.
+- **`detailed_merge_status: mergeable` does not mean the merge button is available** — the API reports `mergeable` when there are no conflicts/blocking discussions/CI failures, but does not account for whether the branch needs a rebase to fast-forward. If the branch is behind the target (e.g. `1.0.x`), rebase first.
+- **Merging one MR makes the sibling MRs stale** — because merges must fast-forward, landing one MR advances the target branch and greys out the merge button on every other open MR targeting it. Merge siblings back-to-back, rebasing each after the previous lands.
+
+**Good Example — rerolling / rebasing a stale branch:**
+```bash
+git fetch origin
+git rebase origin/1.0.x
+# resolve any conflicts (keep BOTH changes when two siblings touched a file)
+git push --force-with-lease <issue-fork-remote> 3586461-add-issue-templates
+```
+
+---
+
+### MR004: Prefer glab api Over curl; Never WebFetch GitLab URLs
+
+**Severity:** `medium`
+
+Use `glab api` for all REST calls — it handles authentication automatically, supports `--form` for multipart uploads and `--input` for JSON bodies. There is no remaining use case for `curl` (which requires manual token extraction).
+
+Never WebFetch a GitLab URL — pages are JavaScript-rendered and return no useful content. Extract the IID from the path and use `glab` instead.
+
+| URL pattern | `glab` command |
+|-------------|----------------|
+| `/-/merge_requests/43` | `glab mr view 43 --repo "git.drupalcode.org/project/<repo>"` |
+| `/-/work_items/3588930` | `glab issue view 3588930 --repo "git.drupalcode.org/project/<repo>"` |
+
+**`glab api` flags:** use `-f` / `--raw-field` for strings; `-F` / `--field` for integers, booleans, and repo placeholders. Adding any `-f`/`-F` flag makes the request a POST automatically.
+
+**Two hostnames, different roles:** `git.drupalcode.org` is a Fastly CDN front serving HTTP(S) — use it for the web UI, `glab` subcommands, and `glab api` reads **and writes**. `git.drupal.org` is the GitLab origin — use it for **SSH** `git push` (the CDN has no SSH listener). A `glab api` write sent to `git.drupal.org` is silently downgraded to a GET (`HTTP 200` with a list instead of `201 Created`) — confirm writes by checking for `201` with `-i`.
+
+**Token tiers:** start with Tier 1 read-only scopes (`read_api`, `read_user`, `read_repository`); add Tier 2 write scopes (`api` or `write_repository`) only when pushing/creating MRs/commenting. A GitLab PAT is **not** scoped to a single project — write scopes reach every repo you can write to, including protected release branches. Never push to a protected branch without explicit human approval.
+
+---
+
+## GitLab CI (Drupal.org)
+
+### GLCI001: Inspect and Debug Pipelines with glab ci
+
+**Severity:** `medium`
+
+Use `glab ci` to inspect pipelines and debug failures. `glab ci trace` is the primary debugging tool — it streams the full job log.
+
+**Good Example:**
+```bash
+glab ci status              # Pipeline status for current branch
+glab ci view                # Interactive pipeline view
+glab ci trace <job-name>    # Stream full log of a job (best for debugging)
+
+# Or fetch a trace via the API
+glab api --hostname git.drupalcode.org "/projects/<id>/jobs/<job-id>/trace"
+```
+
+**Bad Example:**
+```bash
+# ❌ WebFetching the job URL returns no log — the page is JS-rendered
+```
+
+---
+
+### GLCI002: Re-run Pipelines by Pushing, Not via the API
+
+**Severity:** `medium`
+
+**Pipeline triggers via the API are blocked** on git.drupalcode.org — `glab ci run` and `POST /projects/:id/pipeline` do not work (permission error or 301 redirect to `drupal.org/git-error`). **Pipelines fire on push events only.** To re-run CI, push a new commit.
+
+**Good Example:**
+```bash
+# Re-run CI with an empty commit when there is nothing else to push
+git commit --allow-empty -m "ci: #3586461 Re-run pipeline"
+git push <issue-fork-remote> 3586461-add-issue-templates
+```
+
+**Bad Example:**
+```bash
+# ❌ Blocked at the infrastructure level on git.drupalcode.org
+glab ci run
+```
+
+---
+
+## Drupal.org to GitLab Migration
+
+### MIGRATE001: Translate Legacy Issue-Queue Vocabulary
+
+**Severity:** `low`
+
+Drupal's contribution workflow moved from the proprietary issue queue to GitLab. Contributors fluent in the old system use vocabulary that maps directly to GitLab concepts — translate it rather than asking them to reframe.
+
+| Drupal.org term | GitLab equivalent |
+|---|---|
+| Patch | Merge request (MR) — no patch files; all work lives in MR branches |
+| Interdiff | MR "Changes" tab, or `git diff <old-sha>..<new-sha>` |
+| Needs reroll | Branch needs rebase onto current target (`git rebase origin/1.0.x`) |
+| RTBC | `state::rtbc` label + MR approved + CI green |
+| Needs review / Needs work | MR Ready awaiting reviewer / MR has requested changes |
+| Fixed | MR merged / issue closed |
+| Postponed | Issue open, MR closed or not created |
+| Follow-up issue | Child item / linked item |
+| Issue credit / attribution | Contribution record URL (filled in by the contributor) |
+| Commit (applying a patch) | Merge (web UI only) |
+| Version tag (e.g. 11.x) | Target branch |
+| `By:` line in commit | `By:` line in Conventional Commit (Drupal.org usernames) |
+
+**Things that work differently:**
+- **No patch files or interdiffs** — "I posted a patch" means a branch was pushed and an MR opened; interdiffs are generated on demand from MR history.
+- **Rerolling = rebasing** onto the current target, then `git push --force-with-lease`.
+- **Credit attribution is a separate step** — GitLab posts a contribution-record link in a comment on the work item; the contributor must fill it in themselves to receive credit.
+- **Merging requires the web UI** — direct anyone asking "can you commit this?" to the GitLab merge button.
+
+**Common phrases:** "I attached an interdiff" → they pushed new commits, review the updated Changes tab. "This is RTBC" → verify CI is green and check for unresolved threads. "The patch needs a reroll" → rebase onto target. "It's in the queue" → there is a work item but no MR yet.
