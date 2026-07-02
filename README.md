@@ -1,7 +1,9 @@
 # Drupal Standards — Claude Skill
 A Claude skill providing on-demand coding standards for Drupal 10/11 development.
-Covers backend PHP, security, dependency injection, testing, REST APIs, hooks/events,
-the Drupal AI module (including Anthropic/Claude provider), and frontend CSS/JS/Twig.
+Covers backend PHP, security, dependency injection, configuration, testing,
+documentation, common mistakes, REST APIs, hooks/events, the Drupal AI module
+(including Anthropic/Claude provider), and frontend CSS/JS/Twig, the render
+pipeline, and accessibility.
 
 ## What's Included
 
@@ -10,18 +12,22 @@ the Drupal AI module (including Anthropic/Claude provider), and frontend CSS/JS/
 | PHP / OOP / Documentation | 1 | 24 |
 | Security | 1 | 19 |
 | Dependency Injection (deep-dive) | 6 | 115 |
+| Configuration (Config API, schema) | 1 | 12 |
+| Documentation (DocBlocks, README) | 1 | 15 |
+| Common mistakes / corrections | 1 | 12 |
 | Database API | 1 | 7 |
 | Forms API | 1 | 8 |
 | REST / Entity API | 1 | 7 |
 | Hooks & Events | 1 | 7 |
-| Testing (PHPUnit) | 1 | 9 |
+| Testing (PHPUnit) | 1 | 20 |
 | Drupal AI + Anthropic/Claude | 1 | 18 |
 | CSS (formatting, BEM, RTL, units) | 5 | 84 |
 | JavaScript / Drupal behaviors | 2 | 35 |
 | Twig templates | 2 | 44 |
-| Accessibility (WCAG 2.2) | 1 | 16 |
-| DevOps / CI | 1 | 10 |
-| **Total** | **26** | **414+** |
+| Render pipeline (caching, BigPipe) | 1 | 19 |
+| Accessibility (WCAG 2.2) | 1 | 40 |
+| DevOps / CI + Drupal.org contribution | 1 | 23 |
+| **Total** | **30** | **520+** |
 
 ## Installation
 
@@ -49,11 +55,13 @@ based on your task. You can also ask explicitly:
 - 💼 [linkedin.com/in/joshua1234511](https://www.linkedin.com/in/joshua1234511)
 
 ### Highlights
-- 414+ standards across 26 reference files
+- 520+ standards across 30 reference files
 - Full Dependency Injection deep-dive (AutowireTrait, service tags, decoration)
+- Configuration, render pipeline, documentation, and common-mistakes references synced from [`project/ai_best_practices`](https://git.drupalcode.org/project/ai_best_practices)
 - Drupal AI module integration with Anthropic/Claude provider
 - Complete CSS coverage: BEM/SMACSS, RTL, units, Doxygen comments
 - Extended Twig and JavaScript behavior standards
+- Expanded accessibility (WCAG 2.2 AA) and Drupal.org contribution/GitLab workflow
 - Pre-commit checklist with AI-specific checks
 
 ### Assets
