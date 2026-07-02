@@ -7,10 +7,10 @@ metadata:
   linkedin: https://www.linkedin.com/in/joshua1234511
   website: https://fernandesjoshua.com
   location: Cuncolim, Salcette, Goa, India
-description: Comprehensive Drupal coding standards with on-demand loading for back-end (PHP, security, database, services, testing) and front-end (JavaScript, Twig, CSS, accessibility) development. Supports Drupal 10/11 with 280+ validated standards.
+description: Comprehensive Drupal coding standards with on-demand loading for back-end (PHP, security, database, services, configuration, testing, documentation) and front-end (JavaScript, Twig, CSS, accessibility, render pipeline) development. Supports Drupal 10/11 with 500+ validated standards.
 ---
 
-# Drupal Standards v3.1
+# Drupal Standards v3.2
 
 Comprehensive standards for Drupal development with **on-demand loading** to optimize context usage.
 
@@ -57,7 +57,10 @@ These are the **non-negotiable fundamentals** every Drupal developer must follow
 | DI — service tags & collectors | `references/backend/di/service-tags.md` |
 | DI — altering & decorating | `references/backend/di/altering-services.md` |
 | DI — best practices | `references/backend/di/best-practices.md` |
-| Unit/Kernel testing | `references/backend/testing.md` |
+| Unit/Kernel/Functional testing | `references/backend/testing.md` |
+| Configuration / Config API / schema | `references/backend/configuration.md` |
+| Common mistakes / corrections | `references/backend/common-mistakes.md` |
+| Documentation / DocBlocks / README | `references/backend/documentation.md` |
 | API development | `references/backend/api.md` |
 | Hooks & Events | `references/backend/hooks.md`, `references/backend/services.md` |
 | Drupal AI / LLM integration | `references/backend/drupal-ai.md` |
@@ -71,8 +74,10 @@ These are the **non-negotiable fundamentals** every Drupal developer must follow
 | CSS RTL / i18n support | `references/frontend/css-rtl.md` |
 | CSS comments / Doxygen | `references/frontend/css-comments.md` |
 | Twig templates | `references/frontend/twig.md`, `references/frontend/twig-extended.md` |
+| Render arrays / caching / BigPipe | `references/frontend/render-pipeline.md` |
 | Accessibility | `references/frontend/accessibility.md` |
 | Build/deployment | `references/devops.md` |
+| Drupal.org contribution / GitLab / CI | `references/devops.md` |
 
 ### Quick Reference Loading
 
@@ -203,7 +208,10 @@ bash .cursor/skills/drupal-backend-standards/scripts/setup_drupal_dev.sh
 | `php-standards.md` | 24 | ✅ Exists | PSR-4, coding style, type hints, OOP, documentation |
 | `security.md` | 19 | ✅ Exists | Input validation, SQL injection, XSS, CSRF, access control |
 | `services.md` | 11 | ✅ Exists | DI overview, service definitions, plugins, events |
-| `testing.md` | 9 | ✅ Exists | PHPUnit, Kernel tests, Functional tests, Behat |
+| `testing.md` | 20 | ✅ **Updated** | PHPUnit, test-type selection, Kernel schema install, JS tests, data providers, running tests |
+| `configuration.md` | 12 | 🆕 **New** | Config vs State vs Settings, schema, dependencies, overrides, import/export, secrets |
+| `documentation.md` | 15 | 🆕 **New** | DocBlocks, hook/API docs, hook_help, README, handbook/Markdown style |
+| `common-mistakes.md` | 12 | 🆕 **New** | Deprecated/invented APIs, service-location vs DI, cache-tag invalidation, D7 patterns |
 | `database.md` | 7 | ✅ Exists | Database API, parameterized queries, Schema API, migrations |
 | `forms-api.md` | 8 | ✅ Exists | Form building, validation, AJAX, States API, CSRF |
 | `api.md` | 7 | ✅ Exists | Entity API, REST resources, JSON:API, auth, error handling |
@@ -222,7 +230,8 @@ bash .cursor/skills/drupal-backend-standards/scripts/setup_drupal_dev.sh
 |------|-----------|--------|----------|
 | `javascript.md` | 13 | ✅ Exists | Drupal behaviors, ES6+, jQuery, AJAX |
 | `javascript-extended.md` | 22 | ✅ **Integrated** | once(), Drupal.t(), strict mode, full behavior patterns |
-| `accessibility.md` | 16 | ✅ Exists | WCAG 2.2, ARIA, keyboard navigation, semantic HTML |
+| `accessibility.md` | 40 | ✅ **Updated** | WCAG 2.2 AA, ARIA, Render/Form API a11y, theme layer, dynamic content, QA |
+| `render-pipeline.md` | 19 | 🆕 **New** | Render arrays, caching, cacheability bubbling, lazy builders/BigPipe, theme hooks, attachments |
 | `twig.md` | 14 | ✅ Exists | Template syntax, filters, security, preprocess hooks |
 | `twig-extended.md` | 30 | ✅ **Integrated** | Attributes object, BEM in Twig, escaping, patterns |
 | `css-formatting.md` | 21 | ✅ **Integrated** | Indentation, selectors, quotes, semicolons, vendor prefixes |
@@ -239,8 +248,15 @@ bash .cursor/skills/drupal-backend-standards/scripts/setup_drupal_dev.sh
 | Build optimization | 2 | ✅ Exists |
 | Configuration management | 2 | ✅ Exists |
 | Deployment | 2 | ✅ Exists |
+| Drupal.org contribution workflow | 5 | 🆕 **New** |
+| Commit messages (Conventional Commits) | 1 | 🆕 **New** |
+| Merge requests | 4 | 🆕 **New** |
+| GitLab CI (Drupal.org) | 2 | 🆕 **New** |
+| Issue-queue → GitLab migration | 1 | 🆕 **New** |
 
-**Total: 370+ validated standards across 25 reference files** ✅
+**Total: 500+ validated standards across 30 reference files** ✅
+
+> **v3.2** — synced with upstream [`project/ai_best_practices`](https://git.drupalcode.org/project/ai_best_practices) (1.0.x): new configuration, render-pipeline, common-mistakes, and documentation references; expanded testing, accessibility, and devops.
 
 ## Common Patterns Quick Reference
 
