@@ -1149,7 +1149,7 @@ Drupal.org projects require **fast-forward merges**, and merges must go through 
 **Key constraints:**
 - **API merges are blocked** — even a maintainer with a full `api`-scoped PAT cannot merge via `PUT /projects/:id/merge_requests/:iid/merge` or `glab mr merge`; both return permission errors or a 301 redirect to `drupal.org/git-error`. Direct anyone asking "can you commit this?" to the web UI merge button.
 - **`detailed_merge_status: mergeable` does not mean the merge button is available** — the API reports `mergeable` when there are no conflicts/blocking discussions/CI failures, but does not account for whether the branch needs a rebase to fast-forward. If the branch is behind the target (e.g. `1.0.x`), rebase first.
-- **Merging one MR staleness the siblings** — because merges must fast-forward, landing one MR advances the target branch and greys out the merge button on every other open MR targeting it. Merge siblings back-to-back, rebasing each after the previous lands.
+- **Merging one MR makes the sibling MRs stale** — because merges must fast-forward, landing one MR advances the target branch and greys out the merge button on every other open MR targeting it. Merge siblings back-to-back, rebasing each after the previous lands.
 
 **Good Example — rerolling / rebasing a stale branch:**
 ```bash
