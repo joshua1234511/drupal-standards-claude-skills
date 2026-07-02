@@ -198,7 +198,7 @@ $build['comment'] = ['#markup' => $user_supplied_comment];
 
 **Severity:** `critical`
 
-Values that already implement `MarkupInterface` (from `t()`, `Markup::create()`, etc.) bypass the `Xss::filterAdmin()` filter that `#markup` applies. Do not wrap user input in `Markup::create()` to suppress escaping warnings — this silently defeats the XSS filter and creates a vulnerability.
+Values that already implement `MarkupInterface` (from `t()`, `Markup::create()`, etc.) are treated as already-safe markup and will not be escaped or filtered by the renderer. Do not wrap user input in `Markup::create()` to suppress escaping warnings — this creates an XSS vulnerability.
 
 **Good Example:**
 ```php
