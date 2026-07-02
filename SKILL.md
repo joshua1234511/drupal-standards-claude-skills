@@ -60,7 +60,7 @@ These are the **non-negotiable fundamentals** every Drupal developer must follow
 | Unit/Kernel/Functional testing | `references/backend/testing.md` |
 | Configuration / Config API / schema | `references/backend/configuration.md` |
 | Common mistakes / corrections | `references/backend/common-mistakes.md` |
-| Documentation / DocBlocks / README | `references/backend/documentation.md` |
+| Documentation / DocBlocks / README | `references/backend/documentation.md`, `references/backend/php-standards.md` |
 | API development | `references/backend/api.md` |
 | Hooks & Events | `references/backend/hooks.md`, `references/backend/services.md` |
 | Drupal AI / LLM integration | `references/backend/drupal-ai.md` |
