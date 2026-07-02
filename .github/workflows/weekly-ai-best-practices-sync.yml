@@ -1,0 +1,49 @@
+name: Weekly ai_best_practices sync
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync tracked upstream references
+        run: bash scripts/sync_ai_best_practices.sh
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
+        with:
+          commit-message: "chore: sync ai_best_practices updates"
+          branch: chore/weekly-ai-best-practices-sync
+          delete-branch: true
+          title: "chore: sync ai_best_practices updates"
+          body: |
+            ## Summary
+            - sync tracked reference files from `project/ai_best_practices`
+            - refresh this repository with upstream weekly changes
+
+            ## Source
+            - https://git.drupalcode.org/project/ai_best_practices
+          labels: |
+            automated
+          add-paths: |
+            references/backend/common-mistakes.md
+            references/backend/configuration.md
+            references/backend/documentation.md
+            references/backend/testing.md
+            references/devops.md
+            references/frontend/accessibility.md
+            references/frontend/render-pipeline.md
