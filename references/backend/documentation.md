@@ -560,7 +560,7 @@ Give readers one recommended path they can follow with confidence. If multiple v
     ddev start && ddev drush site:install --yes
 
 That gets most people to a working site. Prefer another tool? Lando and
-DIgitalOcean also work — see [Alternative environments](#alternatives).
+DigitalOcean also work — see [Alternative environments](#alternatives).
 
 ## What those commands do
 
