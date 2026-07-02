@@ -32,7 +32,7 @@ resolve_source_path() {
     fi
   done
 
-  candidate="$(find "$UPSTREAM_DIR" -maxdepth 4 -type f -name "$source_name" | head -n 1)"
+  candidate="$(find "$UPSTREAM_DIR" -maxdepth 4 -type f -name "$source_name" -print -quit)"
   if [[ -n "$candidate" ]]; then
     printf '%s\n' "$candidate"
     return 0
