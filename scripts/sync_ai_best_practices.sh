@@ -64,6 +64,10 @@ sync_file() {
 
 if [[ -n "$UPSTREAM_DIR_OVERRIDE" ]]; then
   UPSTREAM_DIR="$UPSTREAM_DIR_OVERRIDE"
+  if [[ ! -d "$UPSTREAM_DIR" ]]; then
+    echo "Upstream override directory not found: $UPSTREAM_DIR" >&2
+    exit 1
+  fi
   echo "Using local upstream directory: $UPSTREAM_DIR"
 else
   echo "Cloning $UPSTREAM_REPO_URL ($UPSTREAM_REF)"
