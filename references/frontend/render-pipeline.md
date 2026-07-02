@@ -157,8 +157,8 @@ Drupal has several render element types that are frequently confused. Choose the
   structured output backed by a Twig template.
 - **`#type`**: uses a render element plugin (form elements, tables, links,
   `html_tag`, `item_list`).
-- **`#markup`**: filtered HTML run through `Xss::filterAdmin()`, which allows a
-  limited set of tags. Use only for trusted admin HTML.
+- **`#markup`**: raw markup treated as already-safe HTML. Use only for trusted,
+  pre-sanitized content (filter with `Xss::filterAdmin()` yourself if needed).
 - **`#plain_text`**: escaped text. Use for user-generated content that should
   not contain any HTML.
 - **`inline_template`** (`#type => 'inline_template'`): renders a Twig snippet
